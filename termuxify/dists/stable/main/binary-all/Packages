@@ -4,7 +4,7 @@ Architecture: all
 Maintainer: Ayan Rajpoot
 Installed-Size: 11408
 Depends: bash
-Filename: https://ayanrajpoot10.github.io/termuxify/pool/termuxify_0.1.0.deb
+Filename: pool/termuxify_0.1.0.deb
 Size: 4057276
 MD5sum: 5b924e4b6d2a746c09ad89fc049a8520
 SHA1: acaa81738a035a31df8897e33e80e4c87c09284b
