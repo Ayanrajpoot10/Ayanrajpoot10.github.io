@@ -2,6 +2,11 @@ name: Update APT Repo with Termuxify
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version'
+        required: true
+        type: string
 
 jobs:
   build-and-update:
@@ -33,7 +38,7 @@ jobs:
           #!/bin/bash
           set -e
 
-          VERSION="0.1.1"
+          VERSION="${{ github.event.inputs.version }}"
           PKGNAME="termuxify"
           DEB_DIR="debian/${PKGNAME}"
           TERMUX_PREFIX="/data/data/com.termux/files/usr"
@@ -94,8 +99,8 @@ jobs:
           chmod +x build.sh
           bash ./build.sh
           cd ..
-          mkdir -p termuxify/pool
-          mv termuxify-src/*.deb termuxify/pool/ || true
+          mkdir -p termuxify/pool/main/t/termuxify
+          mv termuxify-src/*.deb termuxify/pool/main/t/termuxify/ || true
           # Clean up source repository to avoid git embedding issues
           rm -rf termuxify-src
 
@@ -104,7 +109,7 @@ jobs:
           cd termuxify
           for arch in all arm arm64; do
             mkdir -p dists/stable/main/binary-$arch
-            dpkg-scanpackages -a $arch pool /dev/null > dists/stable/main/binary-$arch/Packages
+            dpkg-scanpackages -a $arch pool/main > dists/stable/main/binary-$arch/Packages
             gzip -fk dists/stable/main/binary-$arch/Packages
           done
 
