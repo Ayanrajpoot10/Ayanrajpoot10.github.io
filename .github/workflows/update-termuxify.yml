@@ -38,7 +38,6 @@ jobs:
           cd ..
           mkdir -p termuxify/pool/main/t/termuxify
           mv termuxify-src/*.deb termuxify/pool/main/t/termuxify/ || true
-          # Keep only the latest .deb file
           cd termuxify/pool/main/t/termuxify/
           ls -t *.deb | tail -n +2 | xargs -r rm --
           cd ../../../../
@@ -47,16 +46,10 @@ jobs:
       - name: Rebuild APT metadata
         run: |
           cd termuxify
-          # Debug: Print current directory and files
-          pwd
-          ls -R pool/main/t/termuxify/
-          
-          # Update only version and date in Release file
           mkdir -p dists/stable/main
           sed -i "s/^Version:.*/Version: ${{ github.event.inputs.version }}/" dists/stable/Release
           sed -i "s/^Date:.*/Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')/" dists/stable/Release
 
-          # Generate package metadata using dpkg-scanpackages
           for arch in all arm arm64; do
             mkdir -p dists/stable/main/binary-$arch
             dpkg-scanpackages pool /dev/null > dists/stable/main/binary-$arch/Packages
@@ -66,7 +59,7 @@ jobs:
       - name: Commit and push updates
         run: |
           git add termuxify/
-          git commit -m "Auto: updated APT repo with latest termuxify build" || echo "No changes to commit"
+          git commit -m "Auto: updated APT repo with termuxify v${{ github.event.inputs.version }}"
           git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/Ayanrajpoot10/Ayanrajpoot10.github.io.git
           git push
         env:
