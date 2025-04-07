@@ -107,7 +107,12 @@ jobs:
       - name: Rebuild APT metadata
         run: |
           cd termuxify
+          # Debug: Print current directory and files
+          pwd
+          ls -R pool/main/t/termuxify/
+          
           # Update Release file
+          mkdir -p dists/stable/main
           echo "Origin: Termuxify Repository" > dists/stable/Release
           echo "Label: Termuxify" >> dists/stable/Release
           echo "Suite: stable" >> dists/stable/Release
@@ -120,14 +125,18 @@ jobs:
 
           for arch in all arm arm64; do
             mkdir -p "dists/stable/main/binary-$arch"
-            DEB_FILE=$(find pool/main/t/termuxify -name "*.deb" -type f)
+            # Find the newest deb file
+            DEB_FILE=$(find "$(pwd)/pool/main/t/termuxify" -name "*.deb" -type f | sort -V | tail -n1)
+            echo "Processing $arch with DEB_FILE: $DEB_FILE"
+            
             if [ -f "$DEB_FILE" ]; then
               SIZE=$(stat -c%s "$DEB_FILE")
               MD5=$(md5sum "$DEB_FILE" | cut -d' ' -f1)
               SHA1=$(sha1sum "$DEB_FILE" | cut -d' ' -f1)
               SHA256=$(sha256sum "$DEB_FILE" | cut -d' ' -f1)
-              FILENAME=$(echo "$DEB_FILE" | sed 's|^./||')
+              FILENAME="pool/main/t/termuxify/termuxify_${{ github.event.inputs.version }}_all.deb"
               
+              echo "Generating Packages file for $arch with version ${{ github.event.inputs.version }}"
               {
                 echo "Package: termuxify"
                 echo "Version: ${{ github.event.inputs.version }}"
@@ -142,9 +151,17 @@ jobs:
                 echo "Section: utils"
                 echo "Homepage: https://github.com/Ayanrajpoot10/termuxify"
                 echo "Description: Terminal customization tool for Termux"
+                echo ""
               } > "dists/stable/main/binary-$arch/Packages"
+              
+              # Debug: Print generated Packages file
+              echo "Content of Packages file for $arch:"
+              cat "dists/stable/main/binary-$arch/Packages"
+              
+              gzip -fk "dists/stable/main/binary-$arch/Packages"
+            else
+              echo "Warning: No .deb file found in pool/main/t/termuxify/"
             fi
-            gzip -fk "dists/stable/main/binary-$arch/Packages"
           done
 
       - name: Commit and push updates
