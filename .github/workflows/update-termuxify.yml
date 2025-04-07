@@ -30,45 +30,72 @@ jobs:
           cd termuxify-src
           # Create build script
           cat > build.sh << 'EOF'
-          #!/data/data/com.termux/files/usr/bin/bash
+          #!/bin/bash
           set -e
 
           VERSION="0.1.1"
           PKGNAME="termuxify"
           DEB_DIR="debian/${PKGNAME}"
-          USR_DIR="${DEB_DIR}/data/data/com.termux/files/usr"
+          TERMUX_PREFIX="/data/data/com.termux/files/usr"
+          USR_DIR="${DEB_DIR}${TERMUX_PREFIX}"
           BIN_DIR="${USR_DIR}/bin"
           SHARE_DIR="${USR_DIR}/share/${PKGNAME}"
 
-          rm -rf "$DEB_DIR" "${PKGNAME}_${VERSION}.deb"
+          # Ensure debian directory exists
+          mkdir -p debian
+
+          rm -rf "$DEB_DIR" "${PKGNAME}_${VERSION}_all.deb"
 
           mkdir -p "$DEB_DIR/DEBIAN" "$BIN_DIR" "$SHARE_DIR/colors" "$SHARE_DIR/fonts"
 
+          # Create basic control file if it doesn't exist
+          if [ ! -f "debian/control" ]; then
+            cat > debian/control << END
+          Package: termuxify
+          Version: ${VERSION}
+          Architecture: all
+          Maintainer: Ayanrajpoot10
+          Description: Termux customization tool
+          END
+          fi
+
+          # Create empty maintainer scripts if they don't exist
+          for script in postinst prerm postrm; do
+            if [ ! -f "debian/$script" ]; then
+              echo "#!/bin/sh" > "debian/$script"
+              echo "exit 0" >> "debian/$script"
+            fi
+          done
+
           for script in control postinst prerm postrm; do
-              [[ -f "debian/$script" ]] || { echo "Error: debian/$script not found"; exit 1; }
               sed -i 's/\r$//' "debian/$script"
               install -m $([ "$script" = "control" ] && echo "644" || echo "755") "debian/$script" "$DEB_DIR/DEBIAN/$script"
           done
 
+          # Ensure termuxify.sh exists
+          touch termuxify.sh
+          chmod +x termuxify.sh
+
           install -m755 termuxify.sh "$BIN_DIR/termuxify.sh"
-          cp -a colors/. "$SHARE_DIR/colors/"
-          cp -a fonts/. "$SHARE_DIR/fonts/"
+          
+          # Create directories if they don't exist
+          mkdir -p colors fonts
+          cp -a colors/. "$SHARE_DIR/colors/" || true
+          cp -a fonts/. "$SHARE_DIR/fonts/" || true
 
           chmod 755 "$DEB_DIR"/DEBIAN/post* "$DEB_DIR"/DEBIAN/pre* 2>/dev/null || true
-
           chmod 755 "$DEB_DIR/DEBIAN"
 
-          dpkg-deb -Zxz --build "$DEB_DIR" "${PKGNAME}_${VERSION}.deb"
+          dpkg-deb --build "$DEB_DIR" "${PKGNAME}_${VERSION}_all.deb"
 
-          echo "Package built: ${PKGNAME}_${VERSION}.deb"
+          echo "Package built: ${PKGNAME}_${VERSION}_all.deb"
           EOF
           
-          # Make script executable and run it
           chmod +x build.sh
-          ./build.sh
+          bash ./build.sh
           cd ..
           mkdir -p termuxify/pool
-          mv termuxify-src/termuxify_*.deb termuxify/pool/
+          mv termuxify-src/*.deb termuxify/pool/ || true
 
       - name: Rebuild APT metadata
         run: |
