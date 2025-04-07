@@ -96,6 +96,8 @@ jobs:
           cd ..
           mkdir -p termuxify/pool
           mv termuxify-src/*.deb termuxify/pool/ || true
+          # Clean up source repository to avoid git embedding issues
+          rm -rf termuxify-src
 
       - name: Rebuild APT metadata
         run: |
@@ -108,8 +110,9 @@ jobs:
 
       - name: Commit and push updates
         run: |
-          git add . 
+          git add termuxify/
           git commit -m "Auto: updated APT repo with latest termuxify build" || echo "No changes to commit"
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/Ayanrajpoot10/Ayanrajpoot10.github.io.git
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
