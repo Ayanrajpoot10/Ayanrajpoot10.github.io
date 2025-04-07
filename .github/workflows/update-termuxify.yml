@@ -1,0 +1,51 @@
+name: Update APT Repo with Termuxify
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout APT Repo
+        uses: actions/checkout@v3
+
+      - name: Set up Git for pushing
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Clone termuxify source repo
+        run: |
+          git clone https://github.com/Ayanrajpoot10/termuxify.git termuxify-src
+
+      - name: Install build tools
+        run: |
+          sudo apt update
+          sudo apt install -y dpkg-dev build-essential devscripts
+
+      - name: Build the .deb package
+        run: |
+          cd termuxify-src
+          dpkg-buildpackage -us -uc
+          cd ..
+          mkdir -p termuxify/pool
+          mv termuxify_*_*.deb termuxify/pool/
+
+      - name: Rebuild APT metadata
+        run: |
+          cd termuxify
+          for arch in all arm arm64; do
+            mkdir -p dists/stable/main/binary-$arch
+            dpkg-scanpackages -a $arch pool /dev/null > dists/stable/main/binary-$arch/Packages
+            gzip -fk dists/stable/main/binary-$arch/Packages
+          done
+
+      - name: Commit and push updates
+        run: |
+          git add .
+          git commit -m "Auto: updated APT repo with latest termuxify build" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

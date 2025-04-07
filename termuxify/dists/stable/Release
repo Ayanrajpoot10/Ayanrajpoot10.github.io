@@ -1,0 +1,9 @@
+Origin: Termuxify Repository
+Label: Termuxify
+Suite: stable
+Codename: stable
+Version: 0.1.1
+Architectures: all arm arm64
+Components: main
+Description: Termuxify package repository
+Date: Thu, 14 Dec 2023 12:00:00 UTC
