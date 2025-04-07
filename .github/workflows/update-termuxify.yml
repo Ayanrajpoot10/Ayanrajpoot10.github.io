@@ -108,7 +108,7 @@ jobs:
         run: |
           cd termuxify
           # Update Release file
-          cat > dists/stable/Release << EOF
+          cat > "dists/stable/Release" << 'EOF'
 Origin: Termuxify Repository
 Label: Termuxify
 Suite: stable
@@ -119,10 +119,9 @@ Components: main
 Description: Termuxify package repository
 Date: $(date -u "+%a, %d %b %Y %H:%M:%S UTC")
 EOF
-          
+
           for arch in all arm arm64; do
-            mkdir -p dists/stable/main/binary-$arch
-            # Get package info
+            mkdir -p "dists/stable/main/binary-$arch"
             DEB_FILE=$(find pool/main/t/termuxify -name "*.deb" -type f)
             if [ -f "$DEB_FILE" ]; then
               SIZE=$(stat -c%s "$DEB_FILE")
@@ -131,24 +130,23 @@ EOF
               SHA256=$(sha256sum "$DEB_FILE" | cut -d' ' -f1)
               FILENAME=$(echo "$DEB_FILE" | sed 's|^./||')
               
-              # Create package info
-              cat > "dists/stable/main/binary-$arch/Packages" << EOF
+              cat > "dists/stable/main/binary-$arch/Packages" << 'EOF'
 Package: termuxify
 Version: ${{ github.event.inputs.version }}
 Architecture: all
 Maintainer: Ayan Rajpoot
 Depends: bash
-Filename: $FILENAME
-Size: $SIZE
-MD5sum: $MD5
-SHA1: $SHA1
-SHA256: $SHA256
+Filename: ${FILENAME}
+Size: ${SIZE}
+MD5sum: ${MD5}
+SHA1: ${SHA1}
+SHA256: ${SHA256}
 Section: utils
 Homepage: https://github.com/Ayanrajpoot10/termuxify
 Description: Terminal customization tool for Termux
 EOF
             fi
-            gzip -fk dists/stable/main/binary-$arch/Packages
+            gzip -fk "dists/stable/main/binary-$arch/Packages"
           done
 
       - name: Commit and push updates
