@@ -1,13 +1,13 @@
 Package: termuxify
-Version: 0.1.5
+Version: 0.1.6
 Architecture: all
 Maintainer: Ayan Rajpoot
 Depends: bash
-Filename: pool/main/t/termuxify/termuxify_0.1.5_all.deb
-Size: 4409824
-MD5sum: 383d9a2272ce9e33614d81c5df5124d6
-SHA1: 594f4631c1e532a15aacc32bcf206d999542fa40
-SHA256: 7132a0f4d84c4eb8239fadc1c50814d460b837b3101c33d1c5f6a3df8cc7f602
+Filename: pool/main/t/termuxify/termuxify_0.1.6.deb
+Size: 4056868
+MD5sum: 175e34323f33c9c1e53cfb378245d3ff
+SHA1: 78a4eb7eb65f57a72cbe68901bb04685ed530ce1
+SHA256: 52db7bd89d0c546f6d327a481713505c38ae0ee77c826c0e27fb394d408cf862
 Section: utils
 Homepage: https://github.com/Ayanrajpoot10/termuxify
 Description: Terminal customization tool for Termux

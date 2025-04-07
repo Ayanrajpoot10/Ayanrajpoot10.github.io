@@ -2,8 +2,8 @@ Origin: Termuxify Repository
 Label: Termuxify
 Suite: stable
 Codename: stable
-Version: 0.1.5
+Version: 0.1.6
 Architectures: all arm arm64
 Components: main
 Description: Termuxify package repository
-Date: Mon, 07 Apr 2025 11:52:11 UTC
+Date: Mon, 07 Apr 2025 14:24:17 UTC
