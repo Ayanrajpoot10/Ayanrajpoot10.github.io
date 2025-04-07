@@ -33,75 +33,15 @@ jobs:
       - name: Build the .deb package
         run: |
           cd termuxify-src
-          # Create build script
-          cat > build.sh << 'EOF'
-          #!/bin/bash
-          set -e
-
-          VERSION="${{ github.event.inputs.version }}"
-          PKGNAME="termuxify"
-          DEB_DIR="debian/${PKGNAME}"
-          TERMUX_PREFIX="/data/data/com.termux/files/usr"
-          USR_DIR="${DEB_DIR}${TERMUX_PREFIX}"
-          BIN_DIR="${USR_DIR}/bin"
-          SHARE_DIR="${USR_DIR}/share/${PKGNAME}"
-
-          # Ensure debian directory exists
-          mkdir -p debian
-
-          rm -rf "$DEB_DIR" "${PKGNAME}_${VERSION}_all.deb"
-
-          mkdir -p "$DEB_DIR/DEBIAN" "$BIN_DIR" "$SHARE_DIR/colors" "$SHARE_DIR/fonts"
-
-          # Create basic control file if it doesn't exist
-          if [ ! -f "debian/control" ]; then
-            cat > debian/control << END
-          Package: termuxify
-          Version: ${VERSION}
-          Architecture: all
-          Maintainer: Ayanrajpoot10
-          Description: Termux customization tool
-          END
-          fi
-
-          # Create empty maintainer scripts if they don't exist
-          for script in postinst prerm postrm; do
-            if [ ! -f "debian/$script" ]; then
-              echo "#!/bin/sh" > "debian/$script"
-              echo "exit 0" >> "debian/$script"
-            fi
-          done
-
-          for script in control postinst prerm postrm; do
-              sed -i 's/\r$//' "debian/$script"
-              install -m $([ "$script" = "control" ] && echo "644" || echo "755") "debian/$script" "$DEB_DIR/DEBIAN/$script"
-          done
-
-          # Ensure termuxify.sh exists
-          touch termuxify.sh
-          chmod +x termuxify.sh
-
-          install -m755 termuxify.sh "$BIN_DIR/termuxify.sh"
-          
-          # Create directories if they don't exist
-          mkdir -p colors fonts
-          cp -a colors/. "$SHARE_DIR/colors/" || true
-          cp -a fonts/. "$SHARE_DIR/fonts/" || true
-
-          chmod 755 "$DEB_DIR"/DEBIAN/post* "$DEB_DIR"/DEBIAN/pre* 2>/dev/null || true
-          chmod 755 "$DEB_DIR/DEBIAN"
-
-          dpkg-deb --build "$DEB_DIR" "${PKGNAME}_${VERSION}_all.deb"
-
-          echo "Package built: ${PKGNAME}_${VERSION}_all.deb"
-          EOF
-          
           chmod +x build.sh
-          bash ./build.sh
+          ./build.sh ${{ github.event.inputs.version }}
           cd ..
           mkdir -p termuxify/pool/main/t/termuxify
           mv termuxify-src/*.deb termuxify/pool/main/t/termuxify/ || true
-          # Clean up source repository to avoid git embedding issues
+          # Keep only the latest .deb file
+          cd termuxify/pool/main/t/termuxify/
+          ls -t *.deb | tail -n +2 | xargs -r rm --
+          cd ../../../../
           rm -rf termuxify-src
 
       - name: Rebuild APT metadata
@@ -111,57 +51,16 @@ jobs:
           pwd
           ls -R pool/main/t/termuxify/
           
-          # Update Release file
+          # Update only version and date in Release file
           mkdir -p dists/stable/main
-          echo "Origin: Termuxify Repository" > dists/stable/Release
-          echo "Label: Termuxify" >> dists/stable/Release
-          echo "Suite: stable" >> dists/stable/Release
-          echo "Codename: stable" >> dists/stable/Release
-          echo "Version: ${{ github.event.inputs.version }}" >> dists/stable/Release
-          echo "Architectures: all arm arm64" >> dists/stable/Release
-          echo "Components: main" >> dists/stable/Release
-          echo "Description: Termuxify package repository" >> dists/stable/Release
-          echo "Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')" >> dists/stable/Release
+          sed -i "s/^Version:.*/Version: ${{ github.event.inputs.version }}/" dists/stable/Release
+          sed -i "s/^Date:.*/Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')/" dists/stable/Release
 
+          # Generate package metadata using dpkg-scanpackages
           for arch in all arm arm64; do
-            mkdir -p "dists/stable/main/binary-$arch"
-            # Find the newest deb file
-            DEB_FILE=$(find "$(pwd)/pool/main/t/termuxify" -name "*.deb" -type f | sort -V | tail -n1)
-            echo "Processing $arch with DEB_FILE: $DEB_FILE"
-            
-            if [ -f "$DEB_FILE" ]; then
-              SIZE=$(stat -c%s "$DEB_FILE")
-              MD5=$(md5sum "$DEB_FILE" | cut -d' ' -f1)
-              SHA1=$(sha1sum "$DEB_FILE" | cut -d' ' -f1)
-              SHA256=$(sha256sum "$DEB_FILE" | cut -d' ' -f1)
-              FILENAME="pool/main/t/termuxify/termuxify_${{ github.event.inputs.version }}_all.deb"
-              
-              echo "Generating Packages file for $arch with version ${{ github.event.inputs.version }}"
-              {
-                echo "Package: termuxify"
-                echo "Version: ${{ github.event.inputs.version }}"
-                echo "Architecture: all"
-                echo "Maintainer: Ayan Rajpoot"
-                echo "Depends: bash"
-                echo "Filename: $FILENAME"
-                echo "Size: $SIZE"
-                echo "MD5sum: $MD5"
-                echo "SHA1: $SHA1"
-                echo "SHA256: $SHA256"
-                echo "Section: utils"
-                echo "Homepage: https://github.com/Ayanrajpoot10/termuxify"
-                echo "Description: Terminal customization tool for Termux"
-                echo ""
-              } > "dists/stable/main/binary-$arch/Packages"
-              
-              # Debug: Print generated Packages file
-              echo "Content of Packages file for $arch:"
-              cat "dists/stable/main/binary-$arch/Packages"
-              
-              gzip -fk "dists/stable/main/binary-$arch/Packages"
-            else
-              echo "Warning: No .deb file found in pool/main/t/termuxify/"
-            fi
+            mkdir -p dists/stable/main/binary-$arch
+            dpkg-scanpackages pool /dev/null > dists/stable/main/binary-$arch/Packages
+            gzip -c dists/stable/main/binary-$arch/Packages > dists/stable/main/binary-$arch/Packages.gz
           done
 
       - name: Commit and push updates
